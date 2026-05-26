@@ -4,6 +4,7 @@ import {
   ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../lib/AuthContext';
 import { useTheme } from '../lib/ThemeContext';
 import { Group, createGroup, fetchUserGroups, inviteMemberToGroup, deleteGroup } from '../lib/queries';
@@ -162,6 +163,7 @@ function GroupCard({
   group, isAdmin, onInvite, onDelete, delay,
 }: { group: Group; isAdmin: boolean; onInvite: (g: Group) => void; onDelete: (g: Group) => void; delay: number }) {
   const { colors } = useTheme();
+  const navigation = useNavigation<any>();
   const entrance = useEntrance(delay, 18);
   const press = usePressAnim(0.97);
   const invitePress = usePressAnim(0.92);
@@ -172,6 +174,7 @@ function GroupCard({
     <Animated.View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }, entrance.style]}>
       <Pressable
         style={{ flexDirection: 'row', flex: 1, overflow: 'hidden' }}
+        onPress={() => navigation.navigate('GroupChat', { group })}
         onPressIn={press.onPressIn}
         onPressOut={press.onPressOut}
       >
@@ -279,8 +282,8 @@ export default function GroupsScreen() {
   }
 
   const filtered = groups.filter(g =>
-    g.name.toLowerCase().includes(search.toLowerCase()) ||
-    g.department.toLowerCase().includes(search.toLowerCase()),
+    (g.name?.toLowerCase() ?? '').includes(search.toLowerCase()) ||
+    (g.department?.toLowerCase() ?? '').includes(search.toLowerCase()),
   );
 
   if (!user) return null;

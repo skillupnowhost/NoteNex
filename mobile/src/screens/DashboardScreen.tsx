@@ -1,7 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../lib/AuthContext';
 import { useTheme } from '../lib/ThemeContext';
 import { fetchAssignments, fetchMaterials, fetchProjects } from '../lib/queries';
@@ -13,17 +14,22 @@ function getDisplayName(email: string) {
 
 // ─── Stat Card ────────────────────────────────────────────────────────────────
 
-function StatCard({ label, value, icon, color, delay }: { label: string; value: number; icon: string; color: string; delay: number }) {
+function StatCard({
+  label, value, icon, color, delay, onPress,
+}: {
+  label: string; value: number; icon: string; color: string; delay: number; onPress: () => void;
+}) {
   const { colors } = useTheme();
   const entrance = useEntrance(delay, 22);
   const iconPop = useIconPop(delay + 120);
-  const press = usePressAnim(0.94);
+  const press = usePressAnim(0.91);
   const countStr = useCountUp(value, delay + 80);
 
   return (
     <Animated.View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }, entrance.style]}>
       <Pressable
         style={{ alignItems: 'center', flex: 1 }}
+        onPress={onPress}
         onPressIn={press.onPressIn}
         onPressOut={press.onPressOut}
       >
@@ -81,7 +87,6 @@ export default function DashboardScreen() {
   const sectionOneEntrance = useEntrance(60, 14);
   const sectionTwoEntrance = useEntrance(280, 14);
 
-  // Banner left border pulse
   const borderPulse = useRef(new Animated.Value(1)).current;
   useEffect(() => {
     const loop = Animated.loop(
@@ -94,19 +99,21 @@ export default function DashboardScreen() {
     return () => loop.stop();
   }, []);
 
-  useEffect(() => {
-    if (!user) return;
-    const u = user;
-    Promise.all([
-      fetchMaterials(u.institution, u.department, u.year),
-      fetchAssignments(u.institution, u.department, u.year),
-      fetchProjects(u.institution, u.department, u.year),
-    ]).then(([m, a, p]) => {
-      setMaterials(m.length);
-      setAssignments(a.length);
-      setProjects(p.length);
-    }).catch(() => {});
-  }, [user]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!user) return;
+      const u = user;
+      Promise.all([
+        fetchMaterials(u.institution, u.department, u.year),
+        fetchAssignments(u.institution, u.department, u.year),
+        fetchProjects(u.institution, u.department, u.year),
+      ]).then(([m, a, p]) => {
+        setMaterials(m.length);
+        setAssignments(a.length);
+        setProjects(p.length);
+      }).catch(() => {});
+    }, [user])
+  );
 
   if (!user) return null;
 
@@ -130,11 +137,33 @@ export default function DashboardScreen() {
         </Animated.View>
       </Animated.View>
 
+      {/* Overview stat cards — each navigates to the correct page */}
       <Animated.Text style={[styles.sectionTitle, { color: colors.textSubtle }, sectionOneEntrance.style]}>Overview</Animated.Text>
       <View style={styles.statsRow}>
-        <StatCard label="Materials" value={materials} icon="book" color={colors.accent} delay={80} />
-        <StatCard label="Assignments" value={assignments} icon="document-text" color={colors.amber} delay={160} />
-        <StatCard label="Projects" value={projects} icon="layers" color={colors.purple} delay={240} />
+        <StatCard
+          label="Materials"
+          value={materials}
+          icon="book"
+          color={colors.accent}
+          delay={80}
+          onPress={() => navigation.navigate('Materials')}
+        />
+        <StatCard
+          label="Assignments"
+          value={assignments}
+          icon="document-text"
+          color={colors.amber}
+          delay={160}
+          onPress={() => navigation.navigate('Assignments')}
+        />
+        <StatCard
+          label="Projects"
+          value={projects}
+          icon="layers"
+          color={colors.purple}
+          delay={240}
+          onPress={() => navigation.navigate('Projects')}
+        />
       </View>
 
       <Animated.Text style={[styles.sectionTitle, { color: colors.textSubtle }, sectionTwoEntrance.style]}>Quick access</Animated.Text>

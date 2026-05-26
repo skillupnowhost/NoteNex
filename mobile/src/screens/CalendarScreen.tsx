@@ -19,6 +19,45 @@ const MONTH_NAMES = [
 ];
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+// Indian national holidays + major religious festivals (approximate for lunar dates)
+const INDIAN_HOLIDAYS: Record<string, string[]> = {
+  '2026-01-01': ["New Year's Day"],
+  '2026-01-14': ['Makar Sankranti / Pongal'],
+  '2026-01-26': ['Republic Day'],
+  '2026-03-03': ['Holi (Dhuleti)'],
+  '2026-03-19': ['Ugadi / Gudi Padwa'],
+  '2026-03-20': ['Eid ul-Fitr (approx)'],
+  '2026-03-29': ['Ram Navami'],
+  '2026-04-02': ['Mahavir Jayanti'],
+  '2026-04-03': ['Good Friday'],
+  '2026-04-05': ['Easter Sunday'],
+  '2026-04-14': ['Dr. Ambedkar Jayanti', 'Baisakhi / Vishu'],
+  '2026-05-27': ['Buddha Purnima', 'Eid ul-Adha (approx)'],
+  '2026-07-16': ['Muharram'],
+  '2026-08-15': ['Independence Day'],
+  '2026-08-28': ['Janmashtami'],
+  '2026-09-06': ['Onam (Thiruvonam)'],
+  '2026-09-25': ['Milad-un-Nabi'],
+  '2026-10-02': ['Gandhi Jayanti'],
+  '2026-10-20': ['Navratri begins'],
+  '2026-10-24': ['Dussehra'],
+  '2026-11-01': ['Diwali / Deepavali'],
+  '2026-11-02': ['Govardhan Puja'],
+  '2026-11-03': ['Bhai Dooj'],
+  '2026-11-23': ['Guru Nanak Jayanti'],
+  '2026-12-25': ['Christmas Day'],
+};
+
+function getHolidaysForDate(year: number, month: number, day: number): string[] {
+  const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  return INDIAN_HOLIDAYS[key] ?? [];
+}
+
+function getHolidayForDate(year: number, month: number, day: number): string | null {
+  const holidays = getHolidaysForDate(year, month, day);
+  return holidays.length > 0 ? holidays[0] : null;
+}
+
 const EVENT_TYPES: EventType[] = ['Exam', 'Assignment', 'Project', 'Seminar', 'Workshop', 'Holiday', 'Other'];
 const SEMESTERS: Semester[] = ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4', 'Sem 5', 'Sem 6', 'Sem 7', 'Sem 8', 'All'];
 
@@ -181,7 +220,7 @@ function AddEventModal({
 // ─── Date Action Sheet ────────────────────────────────────────────────────────
 
 function DateActionSheet({
-  visible, date, eventsOnDay, userRole, onClose, onAddEvent, colors,
+  visible, date, eventsOnDay, userRole, onClose, onAddEvent, colors, holidays,
 }: {
   visible: boolean;
   date: Date | null;
@@ -190,6 +229,7 @@ function DateActionSheet({
   onClose: () => void;
   onAddEvent: () => void;
   colors: any;
+  holidays: string[];
 }) {
   const sheetAnim = useRef(new Animated.Value(500)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
@@ -214,6 +254,7 @@ function DateActionSheet({
   const isSunday = date.getDay() === 0;
   const dateStr = date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const allowAdd = canAddEvent(userRole);
+  const isHolidayDay = holidays.length > 0;
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
@@ -223,16 +264,26 @@ function DateActionSheet({
           <View style={[styles.sheetHandle, { backgroundColor: colors.border }]} />
 
           {/* Date header */}
-          <View style={[styles.dateSheetHeader, isSunday && { backgroundColor: '#ff4d4d18', borderRadius: 14, padding: 12, marginBottom: 8 }]}>
+          <View style={[
+            styles.dateSheetHeader,
+            isHolidayDay && { backgroundColor: '#22c55e18', borderRadius: 14, padding: 12, marginBottom: 8 },
+            !isHolidayDay && isSunday && { backgroundColor: '#ff4d4d18', borderRadius: 14, padding: 12, marginBottom: 8 },
+          ]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Ionicons
                 name="calendar"
                 size={20}
-                color={isSunday ? '#ff4d4d' : colors.accent}
+                color={isHolidayDay ? '#16a34a' : isSunday ? '#ff4d4d' : colors.accent}
               />
-              <Text style={[styles.dateSheetTitle, { color: isSunday ? '#ff4d4d' : colors.text }]}>{dateStr}</Text>
+              <Text style={[styles.dateSheetTitle, { color: isHolidayDay ? '#16a34a' : isSunday ? '#ff4d4d' : colors.text }]}>{dateStr}</Text>
             </View>
-            {isSunday && (
+            {isHolidayDay && holidays.map((h, idx) => (
+              <View key={idx} style={styles.holidayTag}>
+                <Ionicons name="sparkles" size={11} color="#fff" />
+                <Text style={styles.holidayTagText}>{h}</Text>
+              </View>
+            ))}
+            {!isHolidayDay && isSunday && (
               <View style={styles.sundayTag}>
                 <Text style={styles.sundayTagText}>Sunday</Text>
               </View>
@@ -364,11 +415,12 @@ function EventCard({ event, isOwner, onDelete, index, colors }: {
 // ─── Calendar Cell ────────────────────────────────────────────────────────────
 
 function CalCell({
-  day, isToday, hasEvt, delay, colors, isSunday, onPress,
+  day, isToday, hasEvt, isHoliday, delay, colors, isSunday, onPress,
 }: {
   day: number | null;
   isToday: boolean;
   hasEvt: boolean;
+  isHoliday: boolean;
   delay: number;
   colors: any;
   isSunday: boolean;
@@ -388,23 +440,25 @@ function CalCell({
 
   if (day === null) return <View style={styles.cell} />;
 
-  const sundayBg = isSunday && !isToday ? 'rgba(255,77,77,0.10)' : undefined;
-  const sundayTextColor = isSunday && !isToday ? '#ff4d4d' : isToday ? '#ffffff' : colors.text;
+  const textColor = isToday ? '#ffffff'
+    : isHoliday ? '#16a34a'
+    : isSunday ? '#ff4d4d'
+    : colors.text;
 
   return (
     <Pressable
-      style={[styles.cell, sundayBg ? { backgroundColor: sundayBg } : null]}
+      style={styles.cell}
       onPress={() => onPress(day)}
       onPressIn={press.onPressIn}
       onPressOut={press.onPressOut}
     >
       <Animated.View style={[
         isToday && [styles.todayCellInner, { backgroundColor: colors.accent }],
-        isSunday && !isToday && styles.sundayCellInner,
         { transform: [{ scale: Animated.multiply(scale, press.scale) }], opacity, alignItems: 'center', justifyContent: 'center', width: '80%', aspectRatio: 1, borderRadius: 20 },
       ]}>
-        <Text style={[styles.dayNum, { color: sundayTextColor }]}>{day}</Text>
-        {hasEvt && <View style={[styles.eventDot, { backgroundColor: isToday ? '#ffffff' : isSunday ? '#ff4d4d' : colors.red }]} />}
+        <Text style={[styles.dayNum, { color: textColor }]}>{day}</Text>
+        {isHoliday && !isToday && <View style={[styles.eventDot, { backgroundColor: '#16a34a' }]} />}
+        {hasEvt && !isHoliday && <View style={[styles.eventDot, { backgroundColor: isToday ? '#ffffff' : isSunday ? '#ff4d4d' : colors.red }]} />}
       </Animated.View>
     </Pressable>
   );
@@ -549,6 +603,10 @@ export default function CalendarScreen() {
       viewDate.getMonth() === today.getMonth() &&
       day === today.getDate();
   }
+  function isHoliday(day: number | null) {
+    if (!day) return false;
+    return getHolidaysForDate(viewDate.getFullYear(), viewDate.getMonth(), day).length > 0;
+  }
 
   const eventsOnSelectedDay = useMemo(() => {
     if (!selectedDate) return [];
@@ -657,6 +715,7 @@ export default function CalendarScreen() {
                     day={day}
                     isToday={isToday(day)}
                     hasEvt={hasEvent(day)}
+                    isHoliday={isHoliday(day)}
                     delay={i * 12}
                     colors={colors}
                     isSunday={i % 7 === 0}
@@ -665,10 +724,16 @@ export default function CalendarScreen() {
                 ))}
               </View>
 
-              {/* Sunday legend */}
-              <View style={styles.sundayLegend}>
-                <View style={styles.sundayLegendDot} />
-                <Text style={[styles.sundayLegendText, { color: colors.textSubtle }]}>Sundays highlighted in red</Text>
+              {/* Legend */}
+              <View style={styles.legendRow}>
+                <View style={[styles.legendItem]}>
+                  <View style={[styles.legendDot, { backgroundColor: '#ff4d4d' }]} />
+                  <Text style={[styles.sundayLegendText, { color: colors.textSubtle }]}>Sundays</Text>
+                </View>
+                <View style={[styles.legendItem]}>
+                  <View style={[styles.legendDot, { backgroundColor: '#22c55e' }]} />
+                  <Text style={[styles.sundayLegendText, { color: colors.textSubtle }]}>Holidays</Text>
+                </View>
               </View>
             </Animated.View>
 
@@ -711,6 +776,9 @@ export default function CalendarScreen() {
         onClose={() => setDateSheetVisible(false)}
         onAddEvent={handleAddFromDateSheet}
         colors={colors}
+        holidays={selectedDate
+          ? getHolidaysForDate(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate())
+          : []}
       />
 
       {/* Add event modal */}
@@ -766,12 +834,14 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
   cell: { width: `${100 / 7}%` as any, aspectRatio: 1, alignItems: 'center', justifyContent: 'center' },
   todayCellInner: {},
-  sundayCellInner: { borderWidth: 1, borderColor: 'rgba(255,77,77,0.30)', borderRadius: 20 },
   dayNum: { fontSize: 13, fontWeight: '600' },
   eventDot: { width: 5, height: 5, borderRadius: 3, marginTop: 1 },
-  sundayLegend: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, paddingTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,77,77,0.20)' },
-  sundayLegendDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#ff4d4d', opacity: 0.7 },
+  legendRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 10, paddingTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(0,0,0,0.08)' },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  legendDot: { width: 10, height: 10, borderRadius: 5, opacity: 0.8 },
   sundayLegendText: { fontSize: 10, fontStyle: 'italic' },
+  holidayTag: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: 6, backgroundColor: '#22c55e', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 3 },
+  holidayTagText: { color: '#fff', fontSize: 11, fontWeight: '800', letterSpacing: 0.3 },
   sectionTitle: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8, paddingHorizontal: 20, marginBottom: 4 },
   filterChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1.5 },
   filterChipText: { fontSize: 12, fontWeight: '700' },

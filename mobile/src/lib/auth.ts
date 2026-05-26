@@ -141,8 +141,14 @@ export async function logout(): Promise<void> {
 }
 
 export async function getSavedUser(): Promise<CampusUser | null> {
-  // Check for an active Supabase session first
-  const { data: { session } } = await supabase.auth.getSession();
+  // Wrap getSession with a timeout so a slow/offline network doesn't hang the app indefinitely
+  const sessionResult = await Promise.race([
+    supabase.auth.getSession(),
+    new Promise<{ data: { session: null } }>(resolve =>
+      setTimeout(() => resolve({ data: { session: null } }), 8000),
+    ),
+  ]);
+  const { data: { session } } = sessionResult;
   if (!session) {
     await AsyncStorage.removeItem(USER_STORAGE_KEY);
     return null;

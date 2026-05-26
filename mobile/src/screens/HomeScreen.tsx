@@ -84,8 +84,8 @@ export default function HomeScreen({ navigation }: Props) {
         {/* Hero */}
         <Animated.View style={[styles.hero, { opacity: heroOpacity, transform: [{ scale: heroScale }] }]}>
           <Image
-            source={require('../../assets/icon.png')}
-            style={[styles.heroLogo, { tintColor: isDark ? '#ffffff' : undefined }]}
+            source={isDark ? require('../../assets/icon-dark.png') : require('../../assets/icon.png')}
+            style={styles.heroLogo}
             resizeMode="contain"
           />
           <Text style={[styles.heroTagline, { color: colors.accent }]}>Share. Learn. Succeed.</Text>

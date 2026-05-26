@@ -13,6 +13,7 @@ import SettingsScreen from '../screens/ProfileScreen';
 import UploadScreen from '../screens/UploadScreen';
 import ProjectsScreen from '../screens/ProjectsScreen';
 import AssignmentsScreen from '../screens/AssignmentsScreen';
+import GroupChatScreen from '../screens/GroupChatScreen';
 import AppHeader from '../components/AppHeader';
 
 const Tab = createBottomTabNavigator();
@@ -25,7 +26,7 @@ const VISIBLE_TABS = [
   { name: 'Settings', icon: 'settings-outline', iconActive: 'settings', label: 'Settings' },
 ];
 
-const HIDDEN_ROUTES = new Set(['Materials', 'Projects', 'Assignments']);
+const HIDDEN_ROUTES = new Set(['Materials', 'Projects', 'Assignments', 'GroupChat']);
 
 const CALENDAR_SUBMENU = [
   { name: 'Calendar',    icon: 'calendar' as const,      label: 'Calendar' },
@@ -300,6 +301,7 @@ export default function BottomTabNavigator() {
       <Tab.Screen name="Materials" component={MaterialsScreen} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="Projects" component={ProjectsScreen} options={{ tabBarButton: () => null }} />
       <Tab.Screen name="Assignments" component={AssignmentsScreen} options={{ tabBarButton: () => null }} />
+      <Tab.Screen name="GroupChat" component={GroupChatScreen} options={{ tabBarButton: () => null, headerShown: false }} />
     </Tab.Navigator>
   );
 }
