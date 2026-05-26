@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "NoteNex",
+    "slug": "NoteNex",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/logo.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/icon-dark.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#03070f"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.notenex.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Used to take your profile photo.",
+        "NSPhotoLibraryUsageDescription": "Used to select your profile photo."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png",
+        "backgroundImage": "./assets/android-icon-background.png"
+      },
+      "package": "com.notenex.app",
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "READ_MEDIA_IMAGES",
+        "CAMERA"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-font"
+    ]
+  }
+}
